@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* design tokens ตาม design/prototype-mobile.html (source of truth) */
+@theme {
+  --color-bg: #0a0a0f;
+  --color-surface: #14141c;
+  --color-surface2: #1c1c26;
+  --color-line: #26262f;
+  --color-ink: #eaeaf0;
+  --color-dim: #8a8a99;
+  --color-faint: #55555f;
+  --color-accent: #6366f1;
+  --color-green: #34d399;
+  --color-red: #f87171;
+  --color-yellow: #fbbf24;
+
+  --animate-slideup: slideup 0.22s ease;
+  --animate-fadein: fadein 0.18s ease;
+  --animate-popin: popin 0.25s ease;
+}
+
+@keyframes slideup {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; }
+}
+
+@keyframes popin {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
