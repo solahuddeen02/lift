@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lift — Mobile Prototype</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141c;
+    --surface-2: #1c1c26;
+    --border: #26262f;
+    --text: #eaeaf0;
+    --text-dim: #8a8a99;
+    --text-faint: #55555f;
+    --accent: #6366f1;
+    --accent-soft: rgba(99,102,241,.15);
+    --green: #34d399;
+    --green-soft: rgba(52,211,153,.15);
+    --red: #f87171;
+    --red-soft: rgba(248,113,113,.15);
+    --yellow: #fbbf24;
+    --yellow-soft: rgba(251,191,36,.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; }
+  body {
+    background:#050508;
+    font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+    color:var(--text);
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh;
+  }
+
+  /* ===== phone frame (แสดงเมื่อดูบน desktop) ===== */
+  .phone {
+    width:390px; height:844px; max-height:96vh;
+    background:var(--bg);
+    border-radius:44px;
+    border:6px solid #1a1a22;
+    box-shadow:0 24px 80px rgba(0,0,0,.7);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    position:relative;
+  }
+  @media (max-width: 430px), (max-height: 700px) {
+    body { display:block; }
+    .phone { width:100%; height:100vh; height:100dvh; max-height:none; border-radius:0; border:none; box-shadow:none; }
+    .notch { display:none !important; }
+  }
+  .notch {
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    width:110px; height:26px; background:#050508; border-radius:99px; z-index:50;
+  }
+
+  /* ===== structure ===== */
+  .screen { flex:1; overflow-y:auto; padding:56px 18px 170px; scrollbar-width:none; }
+  .screen::-webkit-scrollbar { display:none; }
+  .page { display:none; }
+  .page.active { display:block; animation:fadein .18s ease; }
+  @keyframes fadein { from {opacity:0; transform:translateY(6px);} to {opacity:1;} }
+  @keyframes slideup { from {transform:translateY(100%);} to {transform:translateY(0);} }
+
+  .page-title { font-size:26px; font-weight:700; }
+  .page-sub { color:var(--text-dim); font-size:13px; margin:2px 0 20px; }
+
+  /* ===== tab bar ===== */
+  .tabbar {
+    position:absolute; bottom:0; left:0; right:0;
+    background:rgba(20,20,28,.92); backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    display:flex; padding:10px 8px 26px;
+    z-index:40;
+  }
+  .tab {
+    flex:1; background:none; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--text-faint); font-size:10px; transition:.15s;
+  }
+  .tab .t-icon { font-size:20px; line-height:1; }
+  .tab.active { color:var(--accent); }
+
+  /* ===== cards & stats ===== */
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:16px;
+  }
+  .stat-row { display:flex; gap:10px; margin-bottom:14px; }
+  .stat-row .card { flex:1; padding:14px 12px; }
+  .stat-label { font-size:11px; color:var(--text-dim); margin-bottom:4px; }
+  .stat-value { font-size:22px; font-weight:700; }
+  .stat-value small { font-size:12px; font-weight:400; color:var(--text-dim); }
+
+  /* dashboard visuals */
+  .tappable { cursor:pointer; user-select:none; transition:transform .12s, opacity .12s; }
+  .tappable:active { transform:scale(.97); opacity:.85; }
+  .mini-check {
+    width:20px; height:20px; border-radius:50%; flex-shrink:0;
+    border:1.5px solid var(--text-faint); background:none; cursor:pointer;
+    color:transparent; font-size:11px; line-height:1; padding:0;
+  }
+  .mini-check:active { background:var(--green-soft); border-color:var(--green); }
+  .stat-vis { display:flex; align-items:center; gap:10px; padding:12px; }
+  .stat-vis svg { flex-shrink:0; }
+  .week-chart { display:flex; gap:8px; align-items:flex-end; margin-top:4px; }
+  .wc-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .wc-bar { width:100%; height:52px; background:var(--surface-2); border-radius:7px; position:relative; overflow:hidden; }
+  .wc-fill { position:absolute; bottom:0; left:0; right:0; background:var(--accent); border-radius:7px; transition:height .3s; }
+  .wc-col.today .wc-fill { background:var(--green); }
+  .wc-emoji { font-size:13px; line-height:1; }
+  .wc-day { font-size:9px; color:var(--text-faint); }
+  .wc-col.today .wc-day { color:var(--green); font-weight:700; }
+
+  .dash-section { margin-bottom:14px; }
+  .dash-section h3 { font-size:13px; color:var(--text-dim); font-weight:600; margin-bottom:10px; }
+  .mini-task { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .mini-task:last-child { border-bottom:none; padding-bottom:0; }
+  .mini-task .bullet { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .link-btn { background:none; border:none; color:var(--accent); font-size:13px; cursor:pointer; padding:10px 0 0; }
+
+  /* ===== tasks ===== */
+  .filters { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; }
+  .chip {
+    background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
+    border-radius:99px; padding:7px 15px; font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .chip.active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+  .task-list { display:flex; flex-direction:column; gap:8px; }
+  .task {
+    display:flex; align-items:center; gap:12px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:14px;
+  }
+  .task input[type=checkbox] { width:20px; height:20px; accent-color:var(--accent); flex-shrink:0; }
+  .task .t-body { flex:1; min-width:0; }
+  .task .title { font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .task.done .title { color:var(--text-faint); text-decoration:line-through; }
+  .task .meta { display:flex; gap:8px; margin-top:3px; align-items:center; }
+  .pill { border-radius:99px; padding:2px 8px; font-size:10px; font-weight:600; }
+  .pill.high { background:var(--red-soft); color:var(--red); }
+  .pill.medium { background:var(--yellow-soft); color:var(--yellow); }
+  .pill.low { background:var(--surface-2); color:var(--text-dim); }
+  .due { font-size:11px; color:var(--text-dim); }
+  .due.overdue { color:var(--red); }
+  .task .del { background:none; border:none; color:var(--text-faint); font-size:15px; padding:4px; cursor:pointer; }
+  .task .t-body { cursor:pointer; }
+  .task .meta .due { max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* ===== FAB & bottom sheet ===== */
+  .fab {
+    position:absolute; right:18px; bottom:96px; z-index:45;
+    width:56px; height:56px; border-radius:50%;
+    background:var(--accent); color:#fff; border:none; font-size:26px;
+    box-shadow:0 8px 24px rgba(99,102,241,.4); cursor:pointer;
+    display:none; align-items:center; justify-content:center;
+  }
+  .fab.show { display:flex; }
+
+  .sheet-backdrop {
+    position:absolute; inset:0; background:rgba(0,0,0,.55); z-index:60;
+    display:none;
+  }
+  .sheet-backdrop.open { display:block; }
+  .sheet {
+    position:absolute; left:0; right:0; bottom:0;
+    background:var(--surface); border-radius:24px 24px 0 0;
+    padding:20px 20px 36px; animation:slideup .22s ease;
+  }
+  .sheet .handle { width:40px; height:4px; background:var(--border); border-radius:99px; margin:0 auto 16px; }
+  .sheet h3 { font-size:16px; margin-bottom:14px; }
+  .sheet input[type=text], .sheet input[type=date], .sheet select {
+    width:100%; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:12px; padding:13px 14px; color:var(--text); font-size:14px;
+    outline:none; margin-bottom:10px; color-scheme:dark;
+  }
+  .sheet input:focus { border-color:var(--accent); }
+  .sheet .row2 { display:flex; gap:10px; }
+  .btn {
+    width:100%; background:var(--accent); color:#fff; border:none; border-radius:12px;
+    padding:14px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px;
+  }
+
+  /* ===== habits ===== */
+  .habit-card { margin-bottom:10px; }
+  .habit-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .habit-name { font-weight:600; font-size:14px; }
+  .streak { font-size:12px; color:var(--yellow); flex-shrink:0; }
+  .week-dots { display:flex; gap:7px; justify-content:space-between; margin-bottom:12px; }
+  .dot {
+    width:36px; height:36px; border-radius:50%;
+    background:var(--surface-2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:var(--text-faint);
+  }
+  .dot.hit { background:var(--green-soft); border-color:var(--green); color:var(--green); }
+  .checkin {
+    background:var(--surface-2); border:1px dashed var(--border); color:var(--text-dim);
+    border-radius:12px; padding:12px; font-size:13px; cursor:pointer; width:100%;
+  }
+  .checkin.done-today { background:var(--green-soft); border:1px solid var(--green); color:var(--green); }
+  .checkin.done-today small { display:block; font-size:10px; color:var(--text-dim); margin-top:2px; }
+  .habit-head .del, .habit-head .edit { background:none; border:none; color:var(--text-faint); font-size:14px; padding:4px 0 4px 10px; cursor:pointer; }
+  .habit-head .del:hover { color:var(--red); }
+  .habit-head .edit:hover { color:var(--accent); }
+  .freq-tag { font-size:10px; color:var(--text-faint); background:var(--surface-2); border-radius:99px; padding:2px 8px; margin-left:8px; flex-shrink:0; }
+  .interval-info { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:12px; }
+  .badge-due { background:var(--red-soft); color:var(--red); border-radius:99px; padding:3px 10px; font-size:11px; font-weight:600; }
+  .badge-ok { background:var(--surface-2); color:var(--text-faint); border-radius:99px; padding:3px 10px; font-size:11px; }
+  .section-label { font-size:12px; color:var(--text-faint); font-weight:600; margin:18px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
+  .section-label:first-child { margin-top:0; }
+
+  /* usage counter (ตามสภาพ) */
+  .use-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .use-bar { flex:1; height:8px; background:var(--surface-2); border-radius:99px; overflow:hidden; }
+  .use-fill { height:100%; background:var(--accent); border-radius:99px; transition:width .2s; }
+  .use-fill.full { background:var(--red); }
+  .use-count { font-size:12px; color:var(--text-dim); flex-shrink:0; min-width:44px; text-align:right; }
+  .use-btns { display:flex; gap:8px; }
+  .use-btn {
+    flex:1; background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent);
+    border-radius:12px; padding:12px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .use-btn.minus { flex:0 0 52px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); font-weight:400; }
+  @keyframes popin { 0% {transform:scale(.9); opacity:0;} 100% {transform:scale(1); opacity:1;} }
+  .checkin.pop { animation:popin .25s ease; border-style:solid; border-color:var(--red); color:var(--red); background:var(--red-soft); flex:1; width:auto; }
+
+  /* stepper ตั้งจำนวนครั้งถึงรอบ */
+  .threshold-row {
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:12px; padding:10px 14px; margin-bottom:10px;
+  }
+  .threshold-row .th-label { font-size:13px; color:var(--text-dim); }
+  .stepper { display:flex; align-items:center; gap:4px; }
+  .stepper button {
+    width:34px; height:34px; border-radius:10px;
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    font-size:16px; cursor:pointer; transition:.15s;
+  }
+  .stepper button:active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+  .stepper .th-value { min-width:44px; text-align:center; font-size:16px; font-weight:700; }
+  .stepper .th-unit { font-size:11px; color:var(--text-faint); margin-left:2px; }
+
+  /* แถวย่อสำหรับ habit ที่ทำแล้ววันนี้ */
+  .habit-done-row {
+    display:flex; align-items:center; gap:10px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:10px 14px; margin-bottom:6px;
+    font-size:13px; color:var(--text-dim); opacity:.65;
+  }
+  .habit-done-row .name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* filter chips ลอยล่างจอ — โซนนิ้วโป้ง ใช้มือเดียวถึง */
+  .filters.float {
+    position:absolute; bottom:104px; left:14px; right:84px; z-index:35;
+    background:rgba(20,20,28,.92); backdrop-filter:blur(10px);
+    border:1px solid var(--border); border-radius:99px;
+    padding:4px; margin:0; overflow-x:auto; scrollbar-width:none;
+  }
+  .filters.float::-webkit-scrollbar { display:none; }
+  .filters.float .chip { border:none; background:none; padding:8px 13px; flex:1; text-align:center; }
+  .filters.float .chip.active { background:var(--accent-soft); color:var(--accent); }
+  /* หมวดหมู่ task */
+  .cat-tag { font-size:10px; font-weight:600; border-radius:99px; padding:2px 8px; flex-shrink:0; }
+  .cat-pick { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .cat-pick .chip { padding:7px 13px; font-size:12px; }
+  .cat-btn { flex:0 0 auto !important; display:flex; align-items:center; gap:6px; border-right:1px solid var(--border) !important; border-radius:99px 0 0 99px; }
+  .cat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .cat-row-btn {
+    display:flex; align-items:center; gap:12px; width:100%;
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    border-radius:12px; padding:14px; font-size:14px; cursor:pointer; margin-bottom:8px;
+    text-align:left;
+  }
+  .cat-row-btn.active { border-color:var(--accent); background:var(--accent-soft); }
+  .cat-row-btn .check { margin-left:auto; color:var(--accent); }
+  .undo-btn {
+    background:none; border:none; color:var(--text-faint);
+    font-size:12px; cursor:pointer; padding:4px; flex-shrink:0;
+  }
+  .undo-btn:hover { color:var(--red); }
+
+  /* ===== journal ===== */
+  .mood-row { display:flex; gap:8px; margin-bottom:14px; justify-content:space-between; }
+  .mood {
+    font-size:24px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:14px; flex:1; aspect-ratio:1; max-width:60px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    filter:grayscale(.7); transition:.15s;
+  }
+  .mood.selected { filter:none; border-color:var(--accent); background:var(--accent-soft); }
+  textarea {
+    width:100%; min-height:140px; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:14px; color:var(--text); font-size:14px; font-family:inherit;
+    resize:none; outline:none; line-height:1.6; margin-bottom:12px;
+  }
+  textarea:focus { border-color:var(--accent); }
+  .entry { padding:13px 0; border-bottom:1px solid var(--border); }
+  .entry:last-child { border-bottom:none; }
+  .entry .e-date { font-size:11px; color:var(--text-dim); display:flex; justify-content:space-between; margin-bottom:4px; }
+  .entry .e-text { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .proto-note {
+    position:absolute; top:14px; right:16px; z-index:45;
+    font-size:9px; color:var(--text-faint);
+    background:var(--surface-2); border:1px solid var(--border);
+    border-radius:99px; padding:3px 9px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="proto-note">🎨 prototype</div>
+
+  <div class="screen" id="screen">
+
+    <!-- ===== Dashboard ===== -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-title" id="greeting">สวัสดี Deen 👋</div>
+      <div class="page-sub" id="today-date"></div>
+
+      <div class="stat-row">
+        <div class="card stat-vis tappable" onclick="goto('habits')">
+          <div id="ring-routine"></div>
+          <div><div class="stat-label">Routine วันนี้</div><div class="stat-value" id="stat-habits">2<small>/4</small></div></div>
+        </div>
+        <div class="card stat-vis tappable" onclick="goto('tasks')">
+          <div id="ring-tasks"></div>
+          <div><div class="stat-label">Task ค้าง</div><div class="stat-value" id="stat-tasks">3</div></div>
+        </div>
+      </div>
+
+      <div class="card dash-section tappable" onclick="goto('habits')">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin-bottom:0">7 วันล่าสุด</h3>
+          <span class="streak">🔥 12 วันติด</span>
+        </div>
+        <div class="week-chart" id="week-chart"></div>
+      </div>
+
+      <div class="card dash-section">
+        <h3>Task ที่ต้องทำ</h3>
+        <div id="dash-tasks"></div>
+        <button class="link-btn" onclick="goto('tasks')">ดูทั้งหมด →</button>
+      </div>
+
+      <div class="card dash-section">
+        <h3>Routine วันนี้</h3>
+        <div id="dash-habits"></div>
+        <button class="link-btn" onclick="goto('habits')">เช็คอิน →</button>
+      </div>
+
+      <div class="card dash-section tappable" onclick="goto('journal')">
+        <h3>Journal ล่าสุด</h3>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:5px">เมื่อวาน · 😌</div>
+        <div style="font-size:13px;line-height:1.6">วันนี้ทำ Phase 1 ของ Lift เสร็จ รู้สึกดีที่โปรเจกต์เริ่มเป็นรูปเป็นร่าง…</div>
+        <button class="link-btn">เขียนวันนี้ →</button>
+      </div>
+    </section>
+
+    <!-- ===== Tasks ===== -->
+    <section class="page" id="page-tasks">
+      <div class="page-title">Tasks</div>
+      <div class="page-sub" id="task-count"></div>
+
+      <div class="filters float">
+        <button class="chip cat-btn" id="cat-btn" onclick="openCatSheet()">🏷</button>
+        <button class="chip active" data-filter="all">ทั้งหมด</button>
+        <button class="chip" data-filter="todo">ค้างอยู่</button>
+        <button class="chip" data-filter="done">เสร็จแล้ว</button>
+      </div>
+
+      <div class="task-list" id="task-list"></div>
+    </section>
+
+    <!-- ===== Routine ===== -->
+    <section class="page" id="page-habits">
+      <div class="page-title">Routine</div>
+      <div class="page-sub">habit รายวัน + งานดูแลที่ทำเป็นรอบ</div>
+      <div class="filters float" id="htab-row">
+        <button class="chip active" data-htab="today">วันนี้</button>
+        <button class="chip" data-htab="daily">รายวัน</button>
+        <button class="chip" data-htab="cycle">งานเป็นรอบ</button>
+      </div>
+      <div id="habit-list"></div>
+    </section>
+
+    <!-- ===== Journal ===== -->
+    <section class="page" id="page-journal">
+      <div class="page-title">Journal</div>
+      <div class="page-sub">วันนี้รู้สึกยังไง?</div>
+
+      <div class="mood-row">
+        <button class="mood" data-mood="😄">😄</button>
+        <button class="mood" data-mood="😌">😌</button>
+        <button class="mood" data-mood="😐">😐</button>
+        <button class="mood" data-mood="😔">😔</button>
+        <button class="mood" data-mood="😤">😤</button>
+      </div>
+      <textarea id="journal-text" placeholder="วันนี้เป็นยังไงบ้าง…"></textarea>
+      <button class="btn" onclick="saveEntry()">บันทึก</button>
+
+      <div class="card" style="margin-top:16px">
+        <h3 style="font-size:13px;color:var(--text-dim);margin-bottom:4px">บันทึกก่อนหน้า</h3>
+        <div id="entry-list"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- FAB (หน้า tasks / habits) -->
+  <button class="fab" id="fab" onclick="fabClick()">＋</button>
+
+  <!-- bottom sheet: เพิ่ม task -->
+  <div class="sheet-backdrop" id="sheet-backdrop" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet">
+      <div class="handle"></div>
+      <h3 id="task-sheet-title">เพิ่ม Task ใหม่</h3>
+      <input type="text" id="new-task" placeholder="ชื่อ task…" />
+      <div class="row2">
+        <select id="new-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input type="date" id="new-due" />
+      </div>
+      <div class="cat-pick" id="cat-pick">
+        <button type="button" class="chip active" data-cat="">ไม่ระบุ</button>
+        <button type="button" class="chip" data-cat="work">งาน</button>
+        <button type="button" class="chip" data-cat="personal">ส่วนตัว</button>
+        <button type="button" class="chip" data-cat="study">เรียน</button>
+        <button type="button" class="chip" data-cat="home">บ้าน</button>
+      </div>
+      <textarea id="new-task-note" placeholder="โน้ต / รายละเอียด (ไม่บังคับ)" style="min-height:70px;background:var(--surface-2);margin-bottom:10px"></textarea>
+      <button class="btn" id="task-sheet-btn" onclick="saveTask()">เพิ่ม</button>
+    </div>
+  </div>
+
+  <!-- bottom sheet: เพิ่ม habit -->
+  <div class="sheet-backdrop" id="habit-sheet-backdrop" onclick="if(event.target===this)closeHabitSheet()">
+    <div class="sheet">
+      <div class="handle"></div>
+      <h3 id="habit-sheet-title">เพิ่ม Habit ใหม่</h3>
+      <input type="text" id="new-habit" placeholder="ชื่อ habit…" />
+      <select id="new-habit-freq">
+        <option value="1" selected>ทำทุกวัน</option>
+        <option value="2">ทุก 2 วัน</option>
+        <option value="3">ทุก 3 วัน</option>
+        <option value="4">ทุก 4 วัน</option>
+        <option value="7">ทุกสัปดาห์</option>
+        <option value="14">ทุก 2 สัปดาห์</option>
+        <option value="30">ทุกเดือน</option>
+        <option value="90">ทุก 3 เดือน</option>
+        <option value="180">ทุก 6 เดือน</option>
+        <option value="365">ทุกปี</option>
+        <option value="0">ตามสภาพ (นับจากการใช้งาน)</option>
+      </select>
+      <div id="lastdone-row" style="display:none">
+        <div style="font-size:12px;color:var(--text-dim);margin:2px 2px 6px">ทำล่าสุดเมื่อ (ไม่เลือก = เริ่มแบบถึงรอบเลย)</div>
+        <input type="date" id="new-habit-last" />
+      </div>
+      <div class="threshold-row" id="threshold-row" style="display:none">
+        <span class="th-label">ครบกี่ครั้งถึงรอบ</span>
+        <div class="stepper">
+          <button type="button" onclick="stepThreshold(-1)">−</button>
+          <span class="th-value"><span id="th-value">7</span><span class="th-unit"> ครั้ง</span></span>
+          <button type="button" onclick="stepThreshold(1)">＋</button>
+        </div>
+      </div>
+      <button class="btn" id="habit-sheet-btn" onclick="saveHabit()">เพิ่ม</button>
+    </div>
+  </div>
+
+  <!-- bottom sheet: เลือกหมวดกรอง task -->
+  <div class="sheet-backdrop" id="cat-sheet-backdrop" onclick="if(event.target===this)closeCatSheet()">
+    <div class="sheet">
+      <div class="handle"></div>
+      <h3>กรองตามหมวด</h3>
+      <div id="cat-sheet-list"></div>
+    </div>
+  </div>
+
+  <!-- bottom sheet: ตัวเลือก habit (แก้ไข/ลบ ในโซนนิ้วโป้ง) -->
+  <div class="sheet-backdrop" id="action-sheet-backdrop" onclick="if(event.target===this)closeActionSheet()">
+    <div class="sheet">
+      <div class="handle"></div>
+      <h3 id="action-title"></h3>
+      <button class="btn" onclick="actionEdit()">✎ แก้ไข</button>
+      <button class="btn" style="background:var(--red-soft);color:var(--red);margin-top:10px" onclick="actionDelete()">✕ ลบ</button>
+    </div>
+  </div>
+
+  <!-- tab bar -->
+  <nav class="tabbar">
+    <button class="tab active" data-page="dashboard"><span class="t-icon">◧</span>หน้าหลัก</button>
+    <button class="tab" data-page="tasks"><span class="t-icon">☑</span>Tasks</button>
+    <button class="tab" data-page="habits"><span class="t-icon">↻</span>Routine</button>
+    <button class="tab" data-page="journal"><span class="t-icon">✎</span>Journal</button>
+  </nav>
+</div>
+
+<script>
+/* ============ mock data ============ */
+const today = new Date();
+document.getElementById("today-date").textContent =
+  today.toLocaleDateString("th-TH", { weekday:"long", day:"numeric", month:"long" });
+const hour = today.getHours();
+document.getElementById("greeting").textContent =
+  (hour < 12 ? "สวัสดีตอนเช้า" : hour < 18 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนค่ำ") + " Deen 👋";
+
+function offset(d){ const x=new Date(); x.setDate(x.getDate()+d); return x; }
+
+const CATS = {
+  work:     { label:"งาน",    color:"#818cf8" },
+  personal: { label:"ส่วนตัว", color:"#34d399" },
+  study:    { label:"เรียน",   color:"#fbbf24" },
+  home:     { label:"บ้าน",    color:"#f472b6" },
+};
+
+let tasks = [
+  { id:1, title:"ออกแบบ data model ของ Habit module", priority:"high", due:offset(0), done:false, note:"อิงจาก prototype — daily / เป็นรอบ / ตามสภาพ", cat:"work" },
+  { id:2, title:"อ่าน docs SQLAlchemy relationship", priority:"medium", due:offset(1), done:false, note:"", cat:"study" },
+  { id:3, title:"ซื้อของเข้าบ้าน", priority:"low", due:offset(-1), done:false, note:"นม ไข่ ผงซักฟอก", cat:"home" },
+  { id:6, title:"นัดหมอฟัน", priority:"medium", due:offset(5), done:false, note:"", cat:"personal" },
+  { id:7, title:"อ่านหนังสือสอบ", priority:"high", due:null, done:false, note:"", cat:"study" },
+  { id:4, title:"ตั้งค่า repo + push โค้ด Phase 1", priority:"high", due:null, done:true, note:"", cat:"work" },
+  { id:5, title:"ทดสอบ API ด้วย /docs", priority:"medium", due:null, done:true, note:"", cat:"work" },
+];
+let nextId = 8, filter = "all", catFilter = "all", pickedCat = "";
+
+function catTag(key){
+  if (!key || !CATS[key]) return "";
+  const c = CATS[key];
+  return `<span class="cat-tag" style="background:${c.color}26;color:${c.color}">${c.label}</span>`;
+}
+
+let habits = [
+  // freq 1 = ทำทุกวัน / freq > 1 = ทำเป็นรอบทุก N วัน
+  { name:"ออกกำลังกาย 30 นาที", freq:1, streak:12, week:[1,1,0,1,1,1,0], today:false },
+  { name:"อ่านหนังสือ", freq:1, streak:5, week:[0,1,1,1,1,1,0], today:false },
+  { name:"เขียนโค้ด side project", freq:1, streak:8, week:[1,1,1,0,1,1,1], today:true },
+  { name:"เปลี่ยนผ้าปูที่นอน", freq:14, lastDays:5, today:false },
+  { name:"ตัดผม", freq:30, lastDays:26, today:false },
+  { name:"ล้างแอร์", freq:180, lastDays:100, today:false },
+  // freq 0 = ตามสภาพ นับจากการใช้งาน (เช่น ซักผ้า — นับจากผ้าที่ใส่ ครบ threshold แล้วถึงรอบ)
+  { name:"ซักผ้า", freq:0, lastDays:3, uses:5, threshold:7, today:false },
+];
+
+let entries = [
+  { date:"เมื่อวาน", mood:"😌", text:"วันนี้ทำ Phase 1 ของ Lift เสร็จ รู้สึกดีมาก" },
+  { date:"2 วันก่อน", mood:"😄", text:"คุยแผนโปรเจกต์ได้ภาพชัด แบ่ง 4 phase ลงตัว" },
+  { date:"3 วันก่อน", mood:"😐", text:"ยังลังเลระหว่างสองโปรเจกต์" },
+];
+
+/* ============ navigation ============ */
+document.querySelectorAll(".tab").forEach(b =>
+  b.addEventListener("click", () => goto(b.dataset.page)));
+function goto(page){
+  document.querySelectorAll(".tab").forEach(b =>
+    b.classList.toggle("active", b.dataset.page === page));
+  document.querySelectorAll(".page").forEach(p =>
+    p.classList.toggle("active", p.id === "page-"+page));
+  currentPage = page;
+  document.getElementById("fab").classList.toggle("show", page === "tasks" || page === "habits");
+  document.getElementById("screen").scrollTop = 0;
+}
+let currentPage = "dashboard";
+function fabClick(){
+  if (currentPage === "habits") openHabitSheet();
+  else openSheet();
+}
+
+/* ============ bottom sheets ============ */
+function openSheet(){
+  editingTask = null;
+  document.getElementById("task-sheet-title").textContent = "เพิ่ม Task ใหม่";
+  document.getElementById("task-sheet-btn").textContent = "เพิ่ม";
+  document.getElementById("new-task").value = "";
+  document.getElementById("new-task-note").value = "";
+  setPickedCat("");
+  document.getElementById("sheet-backdrop").classList.add("open");
+  setTimeout(() => document.getElementById("new-task").focus(), 100);
+}
+function closeSheet(){
+  document.getElementById("sheet-backdrop").classList.remove("open");
+}
+let editingHabit = null; // null = เพิ่มใหม่, ตัวเลข = index ที่กำลังแก้
+function openHabitSheet(i = null){
+  editingHabit = i;
+  const isEdit = i !== null;
+  document.getElementById("habit-sheet-title").textContent = isEdit ? "แก้ไข Habit" : "เพิ่ม Habit ใหม่";
+  document.getElementById("habit-sheet-btn").textContent = isEdit ? "บันทึก" : "เพิ่ม";
+  document.getElementById("new-habit").value = isEdit ? habits[i].name : "";
+  document.getElementById("new-habit-freq").value = isEdit ? String(habits[i].freq) : "1";
+  thValue = isEdit && habits[i].threshold ? habits[i].threshold : 7;
+  document.getElementById("th-value").textContent = thValue;
+  // prefill วันที่ทำล่าสุดจาก lastDays
+  const lastInput = document.getElementById("new-habit-last");
+  if (isEdit && habits[i].lastDays != null) {
+    const d = new Date(); d.setDate(d.getDate() - habits[i].lastDays);
+    lastInput.value = d.toISOString().slice(0, 10);
+  } else lastInput.value = "";
+  toggleThresholdInput();
+  document.getElementById("habit-sheet-backdrop").classList.add("open");
+  setTimeout(() => document.getElementById("new-habit").focus(), 100);
+}
+function closeHabitSheet(){
+  document.getElementById("habit-sheet-backdrop").classList.remove("open");
+}
+
+/* ============ tasks ============ */
+document.querySelectorAll("#page-tasks .chip[data-filter]").forEach(c =>
+  c.addEventListener("click", () => {
+    filter = c.dataset.filter;
+    document.querySelectorAll("#page-tasks .chip[data-filter]").forEach(x => x.classList.toggle("active", x===c));
+    renderTasks();
+  }));
+
+/* หมวดกรอง — เลือกผ่าน bottom sheet ปุ่มใหญ่ กดง่ายมือเดียว */
+function openCatSheet(){
+  const options = [["all", "ทุกหมวด", null], ...Object.entries(CATS).map(([k,v]) => [k, v.label, v.color])];
+  document.getElementById("cat-sheet-list").innerHTML = options.map(([k, label, color]) => `
+    <button class="cat-row-btn ${catFilter===k?"active":""}" onclick="selectCatFilter('${k}')">
+      <span class="cat-dot" style="background:${color || "var(--text-faint)"}"></span>
+      ${label}
+      ${catFilter===k ? `<span class="check">✓</span>` : ""}
+    </button>`).join("");
+  document.getElementById("cat-sheet-backdrop").classList.add("open");
+}
+function closeCatSheet(){
+  document.getElementById("cat-sheet-backdrop").classList.remove("open");
+}
+function selectCatFilter(k){
+  catFilter = k;
+  const btn = document.getElementById("cat-btn");
+  if (k === "all") { btn.innerHTML = "🏷"; btn.classList.remove("active"); }
+  else {
+    btn.innerHTML = `<span class="cat-dot" style="background:${CATS[k].color}"></span>${CATS[k].label}`;
+    btn.classList.add("active");
+  }
+  closeCatSheet(); renderTasks();
+}
+document.querySelectorAll("#cat-pick .chip").forEach(c =>
+  c.addEventListener("click", () => {
+    pickedCat = c.dataset.cat;
+    c.parentElement.querySelectorAll(".chip").forEach(x => x.classList.toggle("active", x===c));
+  }));
+function setPickedCat(cat){
+  pickedCat = cat || "";
+  document.querySelectorAll("#cat-pick .chip").forEach(x =>
+    x.classList.toggle("active", x.dataset.cat === pickedCat));
+}
+document.getElementById("new-task").addEventListener("keydown", e => {
+  if (e.key === "Enter") saveTask();
+});
+
+let editingTask = null; // null = เพิ่มใหม่, id = task ที่กำลังแก้
+function saveTask(){
+  const input = document.getElementById("new-task");
+  const title = input.value.trim();
+  if (!title) return;
+  const due = document.getElementById("new-due").value;
+  const data = {
+    title,
+    priority: document.getElementById("new-priority").value,
+    due: due ? new Date(due) : null,
+    note: document.getElementById("new-task-note").value.trim(),
+    cat: pickedCat || null,
+  };
+  if (editingTask !== null) {
+    Object.assign(tasks.find(t => t.id === editingTask), data);
+  } else {
+    tasks.unshift({ id:nextId++, ...data, done:false });
+  }
+  input.value = ""; document.getElementById("new-due").value = "";
+  document.getElementById("new-task-note").value = ""; editingTask = null;
+  closeSheet(); renderTasks(); renderDash();
+}
+
+function editTask(id){
+  editingTask = id;
+  const t = tasks.find(t => t.id === id);
+  document.getElementById("task-sheet-title").textContent = "แก้ไข Task";
+  document.getElementById("task-sheet-btn").textContent = "บันทึก";
+  document.getElementById("new-task").value = t.title;
+  document.getElementById("new-priority").value = t.priority;
+  document.getElementById("new-due").value = t.due ? new Date(t.due).toISOString().slice(0,10) : "";
+  document.getElementById("new-task-note").value = t.note || "";
+  setPickedCat(t.cat);
+  document.getElementById("sheet-backdrop").classList.add("open");
+}
+function toggleTask(id){
+  const t = tasks.find(t=>t.id===id); t.done = !t.done;
+  renderTasks(); renderDash();
+}
+function delTask(id){
+  tasks = tasks.filter(t=>t.id!==id);
+  renderTasks(); renderDash();
+}
+
+function dueLabel(t){
+  if (!t.due) return "";
+  const d0 = new Date(); d0.setHours(0,0,0,0);
+  const d1 = new Date(t.due); d1.setHours(0,0,0,0);
+  const diff = Math.round((d1-d0)/864e5);
+  if (diff < 0 && !t.done) return `<span class="due overdue">เลยกำหนด</span>`;
+  if (diff === 0) return `<span class="due">วันนี้</span>`;
+  if (diff === 1) return `<span class="due">พรุ่งนี้</span>`;
+  return `<span class="due">${t.due.toLocaleDateString("th-TH",{day:"numeric",month:"short"})}</span>`;
+}
+
+const PRIO_ORDER = { high:0, medium:1, low:2 };
+
+function taskGroup(t){
+  if (!t.due) return "ไม่มีกำหนด";
+  const d0 = new Date(); d0.setHours(0,0,0,0);
+  const d1 = new Date(t.due); d1.setHours(0,0,0,0);
+  const diff = Math.round((d1-d0)/864e5);
+  if (diff < 0) return "เลยกำหนด";
+  if (diff === 0) return "วันนี้";
+  if (diff === 1) return "พรุ่งนี้";
+  return "ถัดไป";
+}
+
+function taskRow(t){
+  return `
+    <div class="task">
+      <input type="checkbox" onchange="toggleTask(${t.id})">
+      <div class="t-body" onclick="editTask(${t.id})">
+        <div class="title">${t.title}</div>
+        <div class="meta">
+          <span class="pill ${t.priority}">${t.priority}</span>
+          ${catTag(t.cat)}
+          ${dueLabel(t)}
+          ${t.note ? `<span class="due">📝 ${t.note}</span>` : ""}
+        </div>
+      </div>
+      <button class="del" onclick="openTaskActions(${t.id})">⋯</button>
+    </div>`;
+}
+
+function taskDoneRow(t){
+  return `
+    <div class="habit-done-row">
+      <span style="color:var(--green)">✓</span>
+      <span class="name" style="text-decoration:line-through">${t.title}</span>
+      ${catTag(t.cat)}
+      <button class="undo-btn" onclick="toggleTask(${t.id})">ยกเลิก</button>
+    </div>`;
+}
+
+function renderTasks(){
+  const visible = catFilter === "all" ? tasks : tasks.filter(t => t.cat === catFilter);
+  const pending = visible.filter(t => !t.done);
+  const done = visible.filter(t => t.done);
+  const GROUPS = ["เลยกำหนด", "วันนี้", "พรุ่งนี้", "ถัดไป", "ไม่มีกำหนด"];
+
+  let html = "";
+  if (filter !== "done") {
+    for (const g of GROUPS) {
+      const list = pending.filter(t => taskGroup(t) === g)
+        .sort((a,b) => PRIO_ORDER[a.priority] - PRIO_ORDER[b.priority]);
+      if (!list.length) continue;
+      html += `<div class="section-label" ${g==="เลยกำหนด" ? 'style="color:var(--red)"' : ""}>${g} · ${list.length}</div>`
+        + list.map(taskRow).join("");
+    }
+    if (!pending.length) html += `<div style="text-align:center;color:var(--text-faint);font-size:13px;padding:32px 0">ไม่มี task ค้าง 🎉</div>`;
+  }
+  if (filter !== "todo" && done.length) {
+    html += `<div class="section-label">เสร็จแล้ว · ${done.length}</div>` + done.map(taskDoneRow).join("");
+  }
+  document.getElementById("task-list").innerHTML = html;
+  document.getElementById("task-count").textContent = `ค้างอยู่ ${pending.length} งาน`;
+}
+
+/* ============ habits ============ */
+const dayNames = ["จ","อ","พ","พฤ","ศ","ส","อา"];
+
+function freqLabel(f){
+  if (f === 0) return "ตามสภาพ";
+  if (f === 7) return "ทุกสัปดาห์";
+  if (f === 14) return "ทุก 2 สัปดาห์";
+  if (f === 30) return "ทุกเดือน";
+  if (f % 365 === 0) return f === 365 ? "ทุกปี" : `ทุก ${f/365} ปี`;
+  if (f % 30 === 0) return `ทุก ${f/30} เดือน`;
+  return `ทุก ${f} วัน`;
+}
+function daysLabel(d){
+  if (d >= 365) return `${Math.floor(d/365)} ปีก่อน`;
+  if (d >= 60) return `${Math.floor(d/30)} เดือนก่อน`;
+  if (d >= 30) return `1 เดือนก่อน`;
+  return `${d} วันก่อน`;
+}
+function remainLabel(d){
+  if (d >= 60) return `อีก ~${Math.round(d/30)} เดือน`;
+  return `อีก ${d} วัน`;
+}
+function isDue(h){
+  if (h.today) return false;
+  if (h.freq === 0) return h.uses >= h.threshold; // ตามสภาพ: ครบจำนวนใช้งาน
+  return h.freq > 0 && h.lastDays >= h.freq;
+}
+
+function dailyCard(h, i){
+  return `
+    <div class="card habit-card">
+      <div class="habit-head">
+        <span class="habit-name">${h.name}</span>
+        <span class="streak">🔥 ${h.streak}</span>
+        <button class="edit" onclick="openActionSheet(${i})" title="ตัวเลือก">⋯</button>
+      </div>
+      <div class="week-dots">
+        ${h.week.map((v,d)=>`<div class="dot ${v?"hit":""}">${dayNames[d]}</div>`).join("")}
+      </div>
+      <button class="checkin ${h.today?"done-today":""}" onclick="checkin(${i})">
+        ${h.today ? "✓ เช็คอินวันนี้แล้ว<small>แตะอีกครั้งเพื่อยกเลิก</small>" : "เช็คอินวันนี้"}
+      </button>
+    </div>`;
+}
+
+function intervalCard(h, i){
+  const due = isDue(h);
+  const last = h.today || h.lastDays === 0 ? "วันนี้"
+    : h.lastDays == null ? "ยังไม่เคยบันทึก" : daysLabel(h.lastDays);
+  let badge;
+  if (h.today) badge = `<span class="badge-ok">✓ ทำแล้ว</span>`;
+  else if (h.freq === 0) badge = due
+    ? `<span class="badge-due">ถึงรอบแล้ว</span>`
+    : `<span class="badge-ok">อีก ${h.threshold - h.uses} ครั้ง</span>`;
+  else if (due) badge = `<span class="badge-due">ถึงรอบแล้ว</span>`;
+  else badge = `<span class="badge-ok">${remainLabel(h.freq - h.lastDays)}</span>`;
+
+  // ตามสภาพ: แถบนับการใช้งาน + ปุ่ม "ทำแล้ว" เด้งเมื่อครบกำหนด
+  let body;
+  if (h.freq === 0 && !h.today) {
+    const pct = Math.min(100, Math.round((h.uses / h.threshold) * 100));
+    body = `
+      <div class="use-row">
+        <div class="use-bar"><div class="use-fill ${due?"full":""}" style="width:${pct}%"></div></div>
+        <span class="use-count">${h.uses}/${h.threshold}</span>
+      </div>
+      <div class="use-btns">
+        ${h.uses > 0 ? `<button class="use-btn minus" onclick="removeUse(${i})" title="กดพลาด ลบ 1">−1</button>` : ""}
+        ${due
+          ? `<button class="checkin pop" onclick="checkin(${i})">ทำแล้ววันนี้ 🧺</button>`
+          : `<button class="use-btn" onclick="addUse(${i})">＋ ใช้แล้ว 1 ครั้ง</button>`}
+      </div>`;
+  } else {
+    body = `
+      <button class="checkin ${h.today?"done-today":""}" onclick="checkin(${i})">
+        ${h.today ? "✓ ทำแล้ววันนี้<small>แตะอีกครั้งเพื่อยกเลิก</small>" : "ทำแล้ววันนี้"}
+      </button>`;
+  }
+
+  return `
+    <div class="card habit-card">
+      <div class="habit-head">
+        <span class="habit-name">${h.name}</span>
+        <span class="freq-tag">${freqLabel(h.freq)}</span>
+        <button class="edit" onclick="openActionSheet(${i})" title="ตัวเลือก">⋯</button>
+      </div>
+      <div class="interval-info">
+        <span>ทำล่าสุด: ${last}</span>
+        ${badge}
+      </div>
+      ${body}
+    </div>`;
+}
+
+function addUse(i){
+  habits[i].uses++;
+  renderHabits(); renderDash();
+}
+function removeUse(i){
+  habits[i].uses = Math.max(0, habits[i].uses - 1);
+  renderHabits(); renderDash();
+}
+
+// คะแนนความเร่งด่วน — น้อย = ขึ้นบน (เลยกำหนดติดลบ อยู่บนสุด)
+function urgency(h){
+  if (h.freq === 1) return 1; // รายวันที่ยังไม่ทำ
+  if (h.freq === 0) {
+    if (h.uses == null || h.threshold == null) return 99;
+    return isDue(h) ? 0 : 1 + (h.threshold - h.uses);
+  }
+  const remain = h.freq - h.lastDays;
+  return remain <= 0 ? remain : 1 + remain;
+}
+
+function doneRow(h, i){
+  return `
+    <div class="habit-done-row">
+      <span style="color:var(--green)">✓</span>
+      <span class="name">${h.name}</span>
+      ${h.freq === 1 ? `<span class="streak">🔥 ${h.streak}</span>` : `<span class="freq-tag">${freqLabel(h.freq)}</span>`}
+      <button class="undo-btn" onclick="checkin(${i})">ยกเลิก</button>
+    </div>`;
+}
+
+let htab = "today";
+document.querySelectorAll("#htab-row .chip").forEach(c =>
+  c.addEventListener("click", () => {
+    htab = c.dataset.htab;
+    document.querySelectorAll("#htab-row .chip").forEach(x => x.classList.toggle("active", x===c));
+    renderHabits();
+  }));
+
+function renderHabits(){
+  const el = document.getElementById("habit-list");
+  const items = habits.map((h,i)=>({h,i}));
+  const empty = (msg) => `<div style="text-align:center;color:var(--text-faint);font-size:13px;padding:32px 0">${msg}</div>`;
+
+  if (htab === "daily") {
+    // habit รายวันทั้งหมด (การ์ดเต็ม เห็น streak + จุด 7 วัน)
+    const list = items.filter(x => x.h.freq === 1);
+    el.innerHTML = list.map(x => dailyCard(x.h, x.i)).join("") || empty("ยังไม่มี habit รายวัน");
+
+  } else if (htab === "cycle") {
+    // งานเป็นรอบ + ตามสภาพ ทั้งหมด เรียงตามใกล้ถึงรอบ
+    const list = items.filter(x => x.h.freq !== 1).sort((a,b) => urgency(a.h) - urgency(b.h));
+    el.innerHTML = list.map(x => intervalCard(x.h, x.i)).join("") || empty("ยังไม่มีงานเป็นรอบ");
+
+  } else {
+    // วันนี้: เฉพาะที่ต้องทำวันนี้ (รายวัน + ที่ถึงรอบ) เรียงตามเร่งด่วน / ทำแล้วย่อส่วน
+    const active = items.filter(x => !x.h.today && (x.h.freq === 1 || isDue(x.h)))
+      .sort((a,b) => urgency(a.h) - urgency(b.h));
+    const done = items.filter(x => x.h.today);
+    el.innerHTML =
+      (active.length
+        ? active.map(x => x.h.freq === 1 ? dailyCard(x.h, x.i) : intervalCard(x.h, x.i)).join("")
+        : empty("วันนี้ครบหมดแล้ว 🎉")) +
+      (done.length ? `<div class="section-label">เสร็จแล้ววันนี้ · ${done.length}</div>` +
+        done.map(x => doneRow(x.h, x.i)).join("") : "");
+  }
+}
+
+function checkin(i){
+  const h = habits[i];
+  if (h.freq === 1) {
+    if (h.today) {
+      // ยกเลิกกรณีพลาดไปกด
+      h.today = false; h.streak = Math.max(0, h.streak - 1); h.week[h.week.length-1] = 0;
+    } else {
+      h.today = true; h.streak++; h.week[h.week.length-1] = 1;
+    }
+  } else {
+    if (h.today) {
+      // ยกเลิกกรณีพลาดไปกด — คืนค่าเดิมรวมถึงตัวนับการใช้งาน
+      h.today = false; h.lastDays = h.prevLast ?? h.lastDays;
+      if (h.freq === 0) h.uses = h.prevUses ?? h.uses;
+    } else {
+      h.prevLast = h.lastDays; h.lastDays = 0; h.today = true;
+      if (h.freq === 0) { h.prevUses = h.uses; h.uses = 0; } // รีเซ็ตตัวนับหลังซัก
+    }
+  }
+  renderHabits(); renderDash();
+}
+
+function saveHabit(){
+  const input = document.getElementById("new-habit");
+  const name = input.value.trim();
+  if (!name) return;
+  const freq = parseInt(document.getElementById("new-habit-freq").value, 10);
+
+  const threshold = thValue;
+  const lastDays = daysAgoFromInput(); // null = ไม่ได้เลือก
+
+  if (editingHabit !== null) {
+    const h = habits[editingHabit];
+    h.name = name;
+    if (freq === 0) h.threshold = threshold;
+    if (freq !== h.freq) {
+      // เปลี่ยนประเภท — เตรียม field ให้ตรงกับความถี่ใหม่ (เก็บสถานะวันนี้ไว้)
+      h.freq = freq;
+      if (freq === 1) { h.streak ??= 0; h.week ??= [0,0,0,0,0,0,0]; }
+      else if (freq === 0) { h.lastDays ??= null; h.uses ??= 0; h.threshold = threshold; }
+      else { h.lastDays ??= freq; }
+    }
+    if (freq !== 1 && lastDays !== null) h.lastDays = lastDays;
+  } else {
+    if (freq === 1) habits.push({ name, freq, streak:0, week:[0,0,0,0,0,0,0], today:false });
+    else if (freq === 0) habits.push({ name, freq, lastDays, uses:0, threshold, today:false }); // ตามสภาพ
+    else habits.push({ name, freq, lastDays: lastDays ?? freq, today:false }); // ไม่ระบุ = เริ่มแบบถึงรอบเลย
+  }
+  input.value = ""; editingHabit = null;
+  closeHabitSheet(); renderHabits(); renderDash();
+}
+function delHabit(i){
+  if (!confirm(`ลบ "${habits[i].name}"?`)) return;
+  habits.splice(i,1);
+  renderHabits(); renderDash();
+}
+
+/* action sheet — เมนูตัวเลือกเด้งจากล่าง กดถึงด้วยนิ้วโป้ง (ใช้ร่วม habit/task) */
+let actionIndex = null, actionKind = "habit";
+function openActionSheet(i){
+  actionKind = "habit"; actionIndex = i;
+  document.getElementById("action-title").textContent = habits[i].name;
+  document.getElementById("action-sheet-backdrop").classList.add("open");
+}
+function openTaskActions(id){
+  actionKind = "task"; actionIndex = id;
+  document.getElementById("action-title").textContent = tasks.find(t => t.id === id).title;
+  document.getElementById("action-sheet-backdrop").classList.add("open");
+}
+function closeActionSheet(){
+  document.getElementById("action-sheet-backdrop").classList.remove("open");
+}
+function actionEdit(){
+  closeActionSheet();
+  if (actionKind === "task") editTask(actionIndex);
+  else openHabitSheet(actionIndex);
+}
+function actionDelete(){
+  closeActionSheet();
+  if (actionKind === "task") {
+    const t = tasks.find(t => t.id === actionIndex);
+    if (confirm(`ลบ "${t.title}"?`)) delTask(actionIndex);
+  } else delHabit(actionIndex);
+}
+document.getElementById("new-habit").addEventListener("keydown", e => {
+  if (e.key === "Enter") saveHabit();
+});
+let thValue = 7;
+function stepThreshold(d){
+  thValue = Math.max(1, thValue + d);
+  document.getElementById("th-value").textContent = thValue;
+}
+function toggleThresholdInput(){
+  const freq = document.getElementById("new-habit-freq").value;
+  document.getElementById("threshold-row").style.display = freq === "0" ? "flex" : "none";
+  document.getElementById("lastdone-row").style.display = freq !== "1" ? "block" : "none";
+}
+function daysAgoFromInput(){
+  const v = document.getElementById("new-habit-last").value;
+  if (!v) return null;
+  const d = new Date(v); d.setHours(0,0,0,0);
+  const t = new Date(); t.setHours(0,0,0,0);
+  return Math.max(0, Math.round((t - d) / 864e5));
+}
+document.getElementById("new-habit-freq").addEventListener("change", toggleThresholdInput);
+
+/* ============ journal ============ */
+let selectedMood = null;
+document.querySelectorAll(".mood").forEach(m =>
+  m.addEventListener("click", () => {
+    selectedMood = m.dataset.mood;
+    document.querySelectorAll(".mood").forEach(x => x.classList.toggle("selected", x===m));
+  }));
+function saveEntry(){
+  const ta = document.getElementById("journal-text");
+  if (!ta.value.trim()) return;
+  entries.unshift({ date:"วันนี้", mood:selectedMood || "😐", text:ta.value.trim() });
+  ta.value = ""; selectedMood = null;
+  document.querySelectorAll(".mood").forEach(x => x.classList.remove("selected"));
+  renderEntries();
+}
+function renderEntries(){
+  document.getElementById("entry-list").innerHTML = entries.map(e => `
+    <div class="entry">
+      <div class="e-date"><span>${e.date}</span><span>${e.mood}</span></div>
+      <div class="e-text">${e.text}</div>
+    </div>`).join("");
+}
+
+/* ============ dashboard ============ */
+function ring(pct, color, size = 52){
+  const r = 21, c = 2 * Math.PI * r;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 52 52">
+    <circle cx="26" cy="26" r="${r}" fill="none" stroke="var(--surface-2)" stroke-width="6"/>
+    <circle cx="26" cy="26" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+      stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" stroke-linecap="round"
+      transform="rotate(-90 26 26)"/>
+    <text x="26" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">${Math.round(pct*100)}%</text>
+  </svg>`;
+}
+
+// mock 6 วันก่อนหน้า — วันสุดท้ายคำนวณจากสถานะจริง
+const weekHistory = [
+  { done:3, total:4, mood:"😐" },
+  { done:4, total:4, mood:"😄" },
+  { done:2, total:4, mood:"😔" },
+  { done:4, total:4, mood:"😌" },
+  { done:3, total:4, mood:"😄" },
+  { done:4, total:4, mood:"😌" },
+];
+
+function renderWeekChart(todayDone, todayTotal){
+  const d = new Date();
+  const cols = weekHistory.map((w, idx) => {
+    const day = new Date(); day.setDate(d.getDate() - (6 - idx));
+    return { ...w, label: dayNames[(day.getDay() + 6) % 7], today:false };
+  });
+  cols.push({ done:todayDone, total:todayTotal, mood:entries[0]?.date === "วันนี้" ? entries[0].mood : "·",
+    label:"วันนี้", today:true });
+  document.getElementById("week-chart").innerHTML = cols.map(c => `
+    <div class="wc-col ${c.today ? "today" : ""}">
+      <span class="wc-emoji">${c.mood}</span>
+      <div class="wc-bar"><div class="wc-fill" style="height:${c.total ? Math.round(c.done/c.total*100) : 0}%"></div></div>
+      <span class="wc-day">${c.label}</span>
+    </div>`).join("");
+}
+
+function renderDash(){
+  const pending = tasks.filter(t=>!t.done);
+  document.getElementById("stat-tasks").textContent = pending.length;
+  // นับเฉพาะที่ "ต้องทำวันนี้" = habit รายวัน + งานเป็นรอบที่ถึงรอบ/ทำแล้ววันนี้
+  const todayHabits = habits.filter(h => h.freq===1 || isDue(h) || h.today);
+  const doneHabits = todayHabits.filter(h=>h.today).length;
+  document.getElementById("stat-habits").innerHTML = `${doneHabits}<small>/${todayHabits.length}</small>`;
+
+  // วงแหวน progress + กราฟ 7 วัน
+  const routinePct = todayHabits.length ? doneHabits / todayHabits.length : 0;
+  const doneTasks = tasks.filter(t=>t.done).length;
+  const taskPct = tasks.length ? doneTasks / tasks.length : 0;
+  document.getElementById("ring-routine").innerHTML = ring(routinePct, "var(--green)");
+  document.getElementById("ring-tasks").innerHTML = ring(taskPct, "var(--accent)");
+  renderWeekChart(doneHabits, todayHabits.length);
+
+  // task: วงกลมติ๊กเสร็จได้เลย (ขอบสีตาม priority) / แตะชื่อเปิดแก้ไข
+  const colors = { high:"var(--red)", medium:"var(--yellow)", low:"var(--text-faint)" };
+  document.getElementById("dash-tasks").innerHTML = pending.slice(0,3).map(t => `
+    <div class="mini-task">
+      <button class="mini-check" style="border-color:${colors[t.priority]}"
+        onclick="event.stopPropagation(); toggleTask(${t.id})" title="ติ๊กเสร็จ"></button>
+      <span class="tappable" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+        onclick="event.stopPropagation(); editTask(${t.id})">${t.title}</span>
+      ${dueLabel(t)}
+    </div>`).join("") || `<div style="color:var(--text-faint);font-size:13px">ไม่มี task ค้าง 🎉</div>`;
+
+  // routine: แตะทั้งแถวเพื่อเช็คอิน/ยกเลิกจากหน้าหลักได้เลย
+  document.getElementById("dash-habits").innerHTML = habits
+    .map((h,i) => ({h,i}))
+    .filter(x => x.h.freq===1 || isDue(x.h) || x.h.today)
+    .map(({h,i}) => `
+    <div class="mini-task tappable" onclick="event.stopPropagation(); checkin(${i})" title="แตะเพื่อเช็คอิน">
+      <span style="flex:1;${h.today?"color:var(--text-faint)":""}">${h.name}</span>
+      ${h.freq>1 && isDue(h) && !h.today ? `<span class="badge-due">ถึงรอบ</span>` : ""}
+      <span style="color:${h.today?"var(--green)":"var(--text-faint)"}">${h.today?"✓":"○"}</span>
+    </div>`).join("");
+}
+
+renderTasks(); renderHabits(); renderEntries(); renderDash();
+</script>
+</body>
+</html>
