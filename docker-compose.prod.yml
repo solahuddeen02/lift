@@ -1,0 +1,27 @@
+# Production: docker compose -f docker-compose.prod.yml up -d --build
+# ต้องมีไฟล์ .env ข้างๆ กัน (ดู .env.example) — ขั้นตอนเต็มอยู่ใน docs/DEPLOY.md
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite:////data/lift.db
+      # :? = บังคับต้องตั้งค่า — compose จะไม่ยอม start ถ้าไม่มี (ห้ามมี default ใน prod)
+      - SECRET_KEY=${SECRET_KEY:?ต้องตั้ง SECRET_KEY ใน .env — สร้างด้วย openssl rand -hex 32}
+      - REGISTRATION_ENABLED=${REGISTRATION_ENABLED:-true}
+    volumes:
+      - lift-data:/data
+    # ไม่ publish port — เข้าถึงได้ผ่าน nginx (frontend) ใน network ภายในเท่านั้น
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      # bind เฉพาะ localhost — cloudflared บนเครื่องเดียวกันชี้มาที่นี่
+      # ไม่เปิดออก LAN/อินเทอร์เน็ตตรงๆ
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  lift-data:

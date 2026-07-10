@@ -37,7 +37,8 @@ docs/DESIGN.md          # สเปค UI/UX ละเอียดจาก prot
 - [x] Frontend หน้า Tasks refactor ตาม prototype แล้ว (app shell + tab bar + bottom sheets)
 - [x] Frontend หน้า Routine ครบ 3 ประเภท (tab วันนี้/รายวัน/งานเป็นรอบ + urgency sort + uses counter)
 - [x] Journal ครบ backend+frontend (module `journal`, 1 entry/วัน เขียนซ้ำ = แก้, mood 5 แบบ) — pytest รวม 46 ตัว
-- [x] Dashboard ครบ backend+frontend (module `dashboard` — GET /api/v1/dashboard สรุปตัวเดียว) — pytest รวม 56 ตัว, ครบทั้ง 4 หน้าตาม prototype แล้ว 🎉
+- [x] Dashboard ครบ backend+frontend (module `dashboard` — GET /api/v1/dashboard สรุปตัวเดียว) — ครบทั้ง 4 หน้าตาม prototype แล้ว 🎉
+- [x] เตรียม production: docker-compose.prod.yml (SECRET_KEY บังคับ) + env `REGISTRATION_ENABLED` + docs/DEPLOY.md (Proxmox LXC + cloudflared) — pytest รวม 58 ตัว
 
 ## สิ่งสำคัญที่ design เปลี่ยนจาก backend เดิม
 

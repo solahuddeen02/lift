@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./lift.db"
 
     SECRET_KEY: str = "change-me-in-production"
+    # ใช้คนเดียว: สมัคร user แรกเสร็จแล้วตั้ง false เพื่อปิดรับสมัคร
+    REGISTRATION_ENABLED: bool = True
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 

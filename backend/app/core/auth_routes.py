@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.models import User
@@ -39,6 +40,9 @@ class UserOut(BaseModel):
 
 @router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
 def register(data: RegisterIn, db: Session = Depends(get_db)):
+    if not settings.REGISTRATION_ENABLED:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "ปิดรับสมัครสมาชิกอยู่")
+
     exists = db.scalar(select(User).where(User.email == data.email))
     if exists:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
